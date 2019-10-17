@@ -10,8 +10,6 @@
     (java.util.Collections/shuffle al rng)
     (clojure.lang.RT/vector (.toArray al))))
 
-;; API
-
 (def player-move?
   #{:event.type/discard
     :event.type/skip
@@ -21,6 +19,31 @@
 (def valid-player-move?
   #{:event.type/discard
     :event.type/skip})
+
+;; validation & rules
+
+(defn current-player-move
+  [state move]
+  (when (not= (:current-player state)
+              (:player/id move))
+    (assoc move :event/type :event.type/not-player-turn)))
+
+(defn player-card
+  [state move]
+  (let [player-hand? (get (:hands state) (:player/id move))]
+    (when-not (player-hand? (:card/number move))
+      (assoc move :event/type :event.type/not-player-card))))
+
+(defn check
+  [state criterias move]
+  (or
+   (reduce (fn [m check-fn]
+             (or m (check-fn state move)))
+           nil
+           criterias)
+   move))
+
+;; API
 
 (defn card-distribution
   [{:game/keys [id
@@ -42,34 +65,20 @@
 (defn play
   [{:game/keys [state] :as game} player-id card-number]
   (update game :game/events conj
-          (cond
-            (not= (:current-player state) player-id)
-            {:player/id player-id
-             :card/number card-number
-             :event/type :event.type/not-player-turn}
-
-            (contains? (get (:hands state) player-id)
-                       card-number)
-            {:player/id player-id
-             :card/number card-number
-             :event/type :event.type/discard}
-
-            :else
-            {:player/id player-id
-             :card/number card-number
-             :event/type :event.type/not-player-card})))
+          (check state
+                 [current-player-move
+                  player-card]
+                 {:player/id player-id
+                  :card/number card-number
+                  :event/type :event.type/discard})))
 
 (defn skip
   [{:game/keys [state] :as game} player-id]
   (update game :game/events conj
-          (cond
-            (not= (:current-player state) player-id)
-            {:player/id player-id
-             :event/type :event.type/not-player-turn}
-
-            :else
-            {:player/id player-id
-             :event/type :event.type/skip})))
+          (check state
+                 [current-player-move]
+                 {:player/id player-id
+                  :event/type :event.type/skip})))
 
 ;; Aggregators
 
@@ -114,14 +123,12 @@
                              (filter
                               (comp valid-player-move? :event/type)
                               (rseq events)))]
-       (prn last-event)
        last-event))
 
    :current-player
    (fnk [game/players-count last-valid-player-move]
      (if last-valid-player-move
        (let [player-id (:player/id last-valid-player-move)]
-         (prn player-id)
          (if (>= (inc player-id) players-count)
            0
            (inc player-id)))
@@ -163,5 +170,6 @@
       (play 1 37) (compute-state)
       (play 2 7) (compute-state)
       (skip 0) (compute-state)
-      (play 1 26) (compute-state)
-      ))
+      (play 1 26) (compute-state))
+
+  )
