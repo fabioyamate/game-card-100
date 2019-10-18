@@ -20,6 +20,7 @@
                  [venantius/accountant "0.2.4"
                   :exclusions [org.clojure/tools.reader]]
 
+                 [clojure.java-time "0.3.2"]
                  [com.taoensso/sente "1.14.0-RC2"]
                  [prismatic/plumbing "0.5.5"]]
 

@@ -25,6 +25,10 @@
   (def chsk-state state)   ; Watchable, read-only atom
   )
 
+(sente/start-client-chsk-router!
+ ch-chsk (fn [data]
+           (js/console.log (prn-str data))))
+
 ;; -------------------------
 ;; Routes
 

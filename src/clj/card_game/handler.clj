@@ -6,7 +6,9 @@
    [config.core :refer [env]]
    [taoensso.sente :as sente]
    [taoensso.sente.server-adapters.http-kit :refer [get-sch-adapter]]
-   [ring.middleware.anti-forgery :as anti-forgery]))
+   [ring.middleware.anti-forgery :as anti-forgery]
+   [clojure.core.async :as async :refer (<! >! put! chan go-loop timeout)]
+   [java-time :as time]))
 
 (def mount-target
   [:div#app
@@ -47,6 +49,12 @@
   (def ch-chsk                       ch-recv) ; ChannelSocket's receive channel
   (def chsk-send!                    send-fn) ; ChannelSocket's send API fn
   (def connected-uids                connected-uids) ; Watchable, read-only atom
+
+  (go-loop [seconds 1]
+    (<! (timeout 1000))
+    (doseq [uid (:any @connected-uids)]
+      (chsk-send! uid [:fast-push/is-fast (str (time/local-date-time))]))
+    (recur (inc seconds)))
   )
 
 (def app
