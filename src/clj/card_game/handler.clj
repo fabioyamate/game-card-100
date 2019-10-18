@@ -3,7 +3,10 @@
    [reitit.ring :as reitit-ring]
    [card-game.middleware :refer [middleware]]
    [hiccup.page :refer [include-js include-css html5]]
-   [config.core :refer [env]]))
+   [config.core :refer [env]]
+   [taoensso.sente :as sente]
+   [taoensso.sente.server-adapters.http-kit :refer [get-sch-adapter]]
+   [ring.middleware.anti-forgery :as anti-forgery]))
 
 (def mount-target
   [:div#app
@@ -22,6 +25,7 @@
   (html5
    (head)
    [:body {:class "body-container"}
+    [:div#sente-csrf-token {:data-csrf-token (force anti-forgery/*anti-forgery-token*)}]
     mount-target
     (include-js "/js/app.js")]))
 
@@ -32,10 +36,26 @@
    :headers {"Content-Type" "text/html"}
    :body (loading-page)})
 
+;; Websocket
+
+(let [{:keys [ch-recv send-fn connected-uids
+              ajax-post-fn ajax-get-or-ws-handshake-fn]}
+      (sente/make-channel-socket! (get-sch-adapter) {})]
+
+  (def ring-ajax-post                ajax-post-fn)
+  (def ring-ajax-get-or-ws-handshake ajax-get-or-ws-handshake-fn)
+  (def ch-chsk                       ch-recv) ; ChannelSocket's receive channel
+  (def chsk-send!                    send-fn) ; ChannelSocket's send API fn
+  (def connected-uids                connected-uids) ; Watchable, read-only atom
+  )
+
 (def app
   (reitit-ring/ring-handler
    (reitit-ring/router
     [["/" {:get {:handler index-handler}}]
+     ["/chsk"
+      {:get {:handler ring-ajax-get-or-ws-handshake}
+       :post {:handler ring-ajax-post}}]
      ["/items"
       ["" {:get {:handler index-handler}}]
       ["/:item-id" {:get {:handler index-handler

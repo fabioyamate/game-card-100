@@ -10,6 +10,7 @@
                  [reagent-utils "0.3.3"]
                  [ring "1.7.1"]
                  [ring/ring-defaults "0.3.2"]
+                 [ring/ring-anti-forgery "1.3.0"]
                  [hiccup "1.0.5"]
                  [yogthos/config "1.1.3"]
                  [org.clojure/clojurescript "1.10.520"
@@ -19,6 +20,7 @@
                  [venantius/accountant "0.2.4"
                   :exclusions [org.clojure/tools.reader]]
 
+                 [com.taoensso/sente "1.14.0-RC2"]
                  [prismatic/plumbing "0.5.5"]]
 
   :plugins [[lein-environ "1.1.0"]
